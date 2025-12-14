@@ -97,6 +97,7 @@
             cursor: pointer;
             transition: 0.2s;
             border-left: 3px solid transparent;
+            text-decoration: none;
         }
         .nav-item:hover {
             background-color: rgba(255, 255, 255, 0.05);
@@ -337,41 +338,79 @@
 
             loadIndex: async () => {
                 try {
-                    const res = await fetch(`${CONFIG.REAL_PATH}${CONFIG.INDEX_FILE}`);
-                    if (!res.ok) throw new Error(`HTTP_ERROR_${res.status}`);
+                    const fetchPath = `${CONFIG.REAL_PATH}${CONFIG.INDEX_FILE}`;
+                    const res = await fetch(fetchPath);
+                    if (!res.ok) {
+                        // clearer message for common HTTP errors
+                        if (res.status === 404) throw new Error(`INDEX_NOT_FOUND: ${fetchPath} (HTTP 404)`);
+                        throw new Error(`HTTP_ERROR_${res.status}: ${fetchPath}`);
+                    }
                     
+                    let parsed;
                     try {
-                        App.data = await res.json();
+                        parsed = await res.json();
                     } catch (e) {
                         throw new Error(`JSON_SYNTAX_ERROR: ${e.message}`);
                     }
 
+                    // Validate format
+                    if (!Array.isArray(parsed)) {
+                        throw new Error('INDEX_FORMAT_ERROR: expected an array of categories');
+                    }
+
+                    App.data = parsed;
+
+                    // Render
                     App.renderSidebar(App.data);
-                    
-                    // 変更: 最初の記事を自動ロードするのではなく、ホーム（カード一覧）を表示
                     App.renderHome();
 
                 } catch (err) {
-                    App.renderError("Index Load Failed", err);
+                    App.renderError("Index Load Failed", err, `${CONFIG.REAL_PATH}${CONFIG.INDEX_FILE}`);
                 }
             },
 
             renderSidebar: (categories) => {
                 const nav = document.getElementById('nav-container');
-                let html = '';
+                nav.innerHTML = ''; // clear
+
+                if (!Array.isArray(categories)) {
+                    // defensive: show nothing and log
+                    App.renderError("Sidebar Render Failed", new Error("Categories not an array"), `${CONFIG.REAL_PATH}${CONFIG.INDEX_FILE}`);
+                    return;
+                }
 
                 categories.forEach((cat) => {
-                    html += `<div class="nav-category">${cat.category}</div>`;
-                    cat.pages.forEach((page) => {
-                        // data-file属性を追加して後で検索しやすくする
-                        html += `<a class="nav-item" data-file="${page.file}" onclick="App.loadPage('${page.file}', '${page.title}', '${page.date}')">${page.title}</a>`;
+                    const catEl = document.createElement('div');
+                    catEl.className = 'nav-category';
+                    catEl.textContent = cat && cat.category ? cat.category : 'Uncategorized';
+                    nav.appendChild(catEl);
+
+                    const pages = Array.isArray(cat.pages) ? cat.pages : [];
+                    pages.forEach((page) => {
+                        const a = document.createElement('a');
+                        a.className = 'nav-item';
+                        a.setAttribute('data-file', page && page.file ? page.file : '');
+                        a.setAttribute('href', '#'); // make keyboard-focusable
+                        a.setAttribute('role', 'button');
+                        a.setAttribute('tabindex', '0');
+                        a.textContent = page && page.title ? page.title : (page && page.file ? page.file : 'Untitled');
+                        
+                        // Click handler - use functions, avoid inline onclick with raw interpolation
+                        a.addEventListener('click', (ev) => { ev.preventDefault(); App.loadPage(page.file, page.title, page.date); });
+                        // keyboard activation
+                        a.addEventListener('keydown', (ev) => {
+                            if (ev.key === 'Enter' || ev.key === ' ') {
+                                ev.preventDefault();
+                                App.loadPage(page.file, page.title, page.date);
+                            }
+                        });
+
+                        nav.appendChild(a);
                     });
                 });
-
-                nav.innerHTML = html;
             },
 
-            // カード型のホーム画面を表示する機能
+            // カード型のホーム画面を表示する機能 (DOMベースでXSS安全に生成)
             renderHome: () => {
                 const mainEl = document.getElementById('main-content');
                 const scrollContainer = document.getElementById('scroll-container');
@@ -390,41 +429,71 @@
                     ov.style.display = 'none';
                 }
 
-                if (!App.data) return;
+                if (!Array.isArray(App.data)) {
+                    mainEl.innerHTML = '<div class="loader">No data</div>';
+                    return;
+                }
 
-                let html = `
-                    <div class="home-container">
-                        <div class="hero-section">
-                            <h1 class="hero-title">Refloria Town Wiki</h1>
-                            <p class="hero-desc">Welcome to the unofficial information archive. Explore the documents below.</p>
-                        </div>
-                `;
+                // build DOM
+                const container = document.createElement('div');
+                container.className = 'home-container';
+
+                const hero = document.createElement('div');
+                hero.className = 'hero-section';
+                hero.innerHTML = `<h1 class="hero-title">Refloria Town Wiki</h1>
+                                  <p class="hero-desc">Welcome to the unofficial information archive. Explore the documents below.</p>`;
+                container.appendChild(hero);
 
                 App.data.forEach(cat => {
-                    html += `
-                        <div class="category-group">
-                            <div class="category-title">${cat.category}</div>
-                            <div class="card-grid">
-                    `;
-                    
-                    cat.pages.forEach(page => {
-                        html += `
-                            <div class="card" onclick="App.loadPage('${page.file}', '${page.title}', '${page.date}')">
-                                <div class="card-icon">📄</div>
-                                <div class="card-title">${page.title}</div>
-                                <div class="card-meta">
-                                    <span>Last updated: ${page.date}</span>
-                                    <span class="arrow-icon">→</span>
-                                </div>
-                            </div>
-                        `;
+                    const group = document.createElement('div');
+                    group.className = 'category-group';
+
+                    const title = document.createElement('div');
+                    title.className = 'category-title';
+                    title.textContent = cat && cat.category ? cat.category : 'Uncategorized';
+                    group.appendChild(title);
+
+                    const grid = document.createElement('div');
+                    grid.className = 'card-grid';
+
+                    const pages = Array.isArray(cat.pages) ? cat.pages : [];
+                    pages.forEach(page => {
+                        const card = document.createElement('div');
+                        card.className = 'card';
+                        card.tabIndex = 0;
+                        card.setAttribute('role', 'button');
+                        card.addEventListener('click', () => App.loadPage(page.file, page.title, page.date));
+                        card.addEventListener('keydown', (ev) => {
+                            if (ev.key === 'Enter' || ev.key === ' ') {
+                                ev.preventDefault();
+                                App.loadPage(page.file, page.title, page.date);
+                            }
+                        });
+
+                        const icon = document.createElement('div');
+                        icon.className = 'card-icon';
+                        icon.textContent = '📄';
+
+                        const ctitle = document.createElement('div');
+                        ctitle.className = 'card-title';
+                        ctitle.textContent = page && page.title ? page.title : (page && page.file ? page.file : 'Untitled');
+
+                        const meta = document.createElement('div');
+                        meta.className = 'card-meta';
+                        meta.innerHTML = `<span>Last updated: ${page && page.date ? page.date : '—'}</span><span class="arrow-icon">→</span>`;
+
+                        card.appendChild(icon);
+                        card.appendChild(ctitle);
+                        card.appendChild(meta);
+                        grid.appendChild(card);
                     });
 
-                    html += `</div></div>`; // Close grid and group
+                    group.appendChild(grid);
+                    container.appendChild(group);
                 });
 
-                html += `</div>`; // Close home-container
-                mainEl.innerHTML = html;
+                mainEl.innerHTML = '';
+                mainEl.appendChild(container);
             },
 
             loadPage: async (fileName, title, date) => {
@@ -453,13 +522,16 @@
                 mainEl.innerHTML = '<div class="loader">Loading Document...</div>';
 
                 try {
-                    const res = await fetch(`${CONFIG.REAL_PATH}${fileName}`);
+                    if (!fileName) throw new Error('FILE_NAME_MISSING');
+                    const fetchPath = `${CONFIG.REAL_PATH}${fileName}`;
+                    const res = await fetch(fetchPath);
                     let content = "";
                     
                     if (res.ok) {
                         content = await res.text();
                     } else {
-                        throw new Error(`FILE_NOT_FOUND: ${fileName}`);
+                        if (res.status === 404) throw new Error(`FILE_NOT_FOUND: ${fetchPath} (HTTP 404)`);
+                        throw new Error(`HTTP_ERROR_${res.status}: ${fetchPath}`);
                     }
 
                     const htmlContent = parseTextToHtml(content);
@@ -467,8 +539,8 @@
                     mainEl.innerHTML = `
                         <article class="article-container">
                             <header class="doc-header">
-                                <h1 class="doc-title">${title}</h1>
-                                <div class="doc-meta">Last Updated: ${date}</div>
+                                <h1 class="doc-title">${escapeHtml(title || (fileName))}</h1>
+                                <div class="doc-meta">Last Updated: ${escapeHtml(date || '—')}</div>
                             </header>
                             <div class="doc-body">
                                 ${htmlContent}
@@ -477,26 +549,33 @@
                     `;
 
                 } catch (err) {
-                    App.renderError("Content Load Failed", err);
+                    App.renderError("Content Load Failed", err, `${CONFIG.REAL_PATH}${fileName || ''}`);
                 }
             },
 
-            renderError: (title, err) => {
+            renderError: (title, err, pathShown) => {
                 const mainEl = document.getElementById('main-content');
-                let msg = err.message;
-                
+                let msg = err && err.message ? err.message : String(err);
+
+                // Friendly messages for known cases
                 if (msg.includes('JSON_SYNTAX_ERROR')) {
                     msg = "index.json の構文エラーです。カンマ(,)の位置を確認してください。";
                 } else if (msg.includes('FILE_NOT_FOUND')) {
                     msg = "指定されたテキストファイルが見つかりません。";
+                } else if (msg.includes('INDEX_NOT_FOUND')) {
+                    msg = "index.json が見つかりません。パスを確認してください。";
+                } else if (msg.includes('INDEX_FORMAT_ERROR')) {
+                    msg = "index.json の形式が正しくありません（配列を期待）。";
+                } else if (msg.includes('FILE_NAME_MISSING')) {
+                    msg = "読み込むファイル名が指定されていません。";
                 }
 
                 mainEl.innerHTML = `
                     <div style="padding: 2rem;">
                         <div class="error-box">
-                            <div class="error-title">⚠️ ${title}</div>
-                            <p>${msg}</p>
-                            <div class="error-log">Tech Info: ${err.message}<br>Path: ${CONFIG.DISPLAY_PATH}</div>
+                            <div class="error-title">⚠️ ${escapeHtml(title)}</div>
+                            <p>${escapeHtml(msg)}</p>
+                            <div class="error-log">Tech Info: ${escapeHtml(err && err.message ? err.message : String(err))}<br>Fetch Path: ${escapeHtml(pathShown || CONFIG.REAL_PATH)}</div>
                         </div>
                     </div>
                 `;
@@ -519,33 +598,128 @@
             }
         }
 
-        function parseTextToHtml(text) {
-            if (!text) return "";
-            let html = text
-                .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        // basic HTML escaper for injected titles/meta
+        function escapeHtml(str) {
+            if (!str && str !== 0) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
 
-            // 独自記法
-            html = html.replace(/^\/:\/\s*(.+)$/gm, '<h2 class="custom-heading">\$1</h2>');
-            html = html.replace(/^\|\s*(.+)$/gm, '<div class="emphasis-block">\$1</div>');
-            html = html.replace(/^-\s*(.+)$/gm, '<ul class="txt-list"><li>\$1</li></ul>');
-            html = html.replace(/->\s*(.+?)\s*<-/g, '<div class="center-text">\$1</div>');
-            html = html.replace(/::(.+?)::/g, '<span class="marker">\$1</span>');
-            html = html.replace(/~~(.+?)~~/g, '<span class="strikethrough">\$1</span>');
-            html = html.replace(/\*\*\*#([a-fA-F0-9]{3,6})\*(.+?)\*\*\*/g, '<span style="color:#\$1">\$2</span>');
-            html = html.replace(/\*\*(.+?)\*\*/g, '<strong>\$1</strong>');
-            html = html.replace(/\[(.+?)\]\((.+?)\)/g, '<a href="\$2" target="_blank" class="txt-link">\$1</a>');
-            html = html.replace(/\*(.+?)\*/g, '<em>\$1</em>');
-            
-            // 段落処理
-            html = html.replace(/\n\n/g, '</p><p>');
-            html = html.replace(/\n/g, '<br>');
-            
-            html = '<p>' + html + '</p>';
-            
-            // クリーンアップ
-            html = html.replace(/<p><\/p>/g, '');
-            html = html.replace(/<p><h2/g, '<h2').replace(/<\/h2><\/p>/g, '</h2>');
-            html = html.replace(/<p><div/g, '<div').replace(/<\/div><\/p>/g, '</div>');
+        // sanitize href: allow http(s), mailto, absolute/relative paths, hash
+        function safeHref(url) {
+            if (!url) return 'about:blank';
+            const trimmed = String(url).trim();
+            // allow: http(s):, mailto:, relative paths (./, ../, /), or hash #
+            if (/^(https?:\/\/|mailto:|\/|\.\/|\.\.\/|#)/i.test(trimmed)) {
+                return trimmed;
+            }
+            // disallow javascript: etc.
+            return 'about:blank';
+        }
+
+        // Convert custom text format to safe HTML
+        function parseTextToHtml(text) {
+            if (!text) return '';
+            // Escape first
+            let escaped = String(text)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;");
+
+            const lines = escaped.split(/\r?\n/);
+            const out = [];
+
+            // helper to process inline markers for a string
+            function processInline(s) {
+                if (!s) return '';
+                // color: ***#rrggbb*text*** (non-greedy)
+                s = s.replace(/\*\*\*#([a-fA-F0-9]{3,6})\*(.+?)\*\*\*/g, '<span style="color:#$1">$2</span>');
+                // strong
+                s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+                // links [text](url) - sanitize href, add rel
+                s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, function(_, t, u) {
+                    const href = safeHref(u);
+                    const rel = (href === u && /^https?:\/\//i.test(href)) ? ' rel="noopener noreferrer"' : '';
+                    return `<a href="${href}" target="_blank"${rel} class="txt-link">${t}</a>`;
+                });
+                // emphasis
+                s = s.replace(/\*(.+?)\*/g, '<em>$1</em>');
+                // marker
+                s = s.replace(/::(.+?)::/g, '<span class="marker">$1</span>');
+                // strikethrough
+                s = s.replace(/~~(.+?)~~/g, '<span class="strikethrough">$1</span>');
+                // convert remaining single line breaks are handled outside
+                return s;
+            }
+
+            for (let i = 0; i < lines.length; ) {
+                const line = lines[i];
+
+                // Heading: /:/ title
+                const mHeading = line.match(/^\/:\/\s*(.+)$/);
+                if (mHeading) {
+                    out.push(`<h2 class="custom-heading">${processInline(mHeading[1])}</h2>`);
+                    i++;
+                    continue;
+                }
+
+                // Emphasis block: | text
+                const mEm = line.match(/^\|\s*(.+)$/);
+                if (mEm) {
+                    out.push(`<div class="emphasis-block">${processInline(mEm[1])}</div>`);
+                    i++;
+                    continue;
+                }
+
+                // Center text: -> text <-
+                const mCenter = line.match(/^->\s*(.+?)\s*<-\s*$/);
+                if (mCenter) {
+                    out.push(`<div class="center-text">${processInline(mCenter[1])}</div>`);
+                    i++;
+                    continue;
+                }
+
+                // Unordered list: lines starting with '- '
+                if (line.match(/^\-\s+/)) {
+                    const items = [];
+                    while (i < lines.length && lines[i].match(/^\-\s+/)) {
+                        items.push(lines[i].replace(/^\-\s+/, ''));
+                        i++;
+                    }
+                    const lis = items.map(x => `<li>${processInline(x)}</li>`).join('');
+                    out.push(`<ul class="txt-list">${lis}</ul>`);
+                    continue;
+                }
+
+                // Blank line -> paragraph separator
+                if (line.trim() === '') {
+                    // add a paragraph break (empty element) to keep spacing
+                    out.push('');
+                    i++;
+                    continue;
+                }
+
+                // Regular paragraph: collect consecutive non-blank, non-block lines
+                const paraLines = [];
+                while (i < lines.length && lines[i].trim() !== '' &&
+                       !lines[i].match(/^\/:\/|^\||^->|^\-\s+/)) {
+                    paraLines.push(lines[i]);
+                    i++;
+                }
+                const paraText = paraLines.join(' ');
+                out.push(`<p>${processInline(paraText)}</p>`);
+            }
+
+            // join, remove multiple blank outputs
+            const html = out.filter((v, idx, arr) => {
+                // collapse consecutive empty strings
+                if (v === '' && arr[idx - 1] === '') return false;
+                return true;
+            }).join('\n');
 
             return html;
         }
