@@ -1,445 +1,556 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Refloria Town — 記事一覧（完全版）</title>
-<meta name="description" content="Refloria Town の記事一覧。data_1012/kiji/index.json を読み込み、検索・絞り込み・テーマ切替・JSON 構文エラー箇所の表示を行います。">
-<style>
-  /* 基本変数（ライトをデフォルト） */
-  :root{
-    --bg: #ffffff;
-    --card: #fbfdff;
-    --text: #0b1220;
-    --muted: #51606f;
-    --accent: #0a84ff;
-    --radius: 10px;
-    --base: 16px;
-    --gap: 12px;
-    --mono: Menlo, Monaco, "Segoe UI Mono", "Liberation Mono", monospace;
-  }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Refloria Town Wiki</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
 
-  /* ダークテーマ切替時 */
-  [data-theme="dark"]{
-    --bg: #0f1115;
-    --card: #16181d;
-    --text: #e6eef6;
-    --muted: #9daab6;
-    --accent: #00e5ff;
-  }
+    <style>
+        :root {
+            --bg-color: #0f1115;
+            --sidebar-bg: #16181d;
+            --surface-color: #1e1e1e;
+            --surface-hover: #26292e; /* カードホバー用 */
+            --primary-accent: #00e5ff;
+            --secondary-accent: #b388ff;
+            --text-primary: #e0e0e0;
+            --text-secondary: #9daab6;
+            --border-color: #2d313a;
+            --danger-color: #ff5252;
+            
+            --sidebar-width: 280px;
+            --header-height: 60px;
+        }
 
-  html,body{height:100%;margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;background:var(--bg);color:var(--text);font-size:var(--base);}
-  .wrap{max-width:980px;margin:28px auto;padding:18px;box-sizing:border-box;}
-  header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
-  h1{font-size:1.25rem;margin:0}
-  .small{font-size:0.9rem;color:var(--muted)}
-  .controls{display:flex;gap:8px;align-items:center}
-  input[type="search"], select, input[type="file"]{padding:8px;border-radius:8px;border:1px solid rgba(2,6,23,0.06);background:transparent;color:var(--text)}
-  button{background:var(--accent);color:white;border:none;padding:8px 10px;border-radius:8px;cursor:pointer}
-  button.ghost{background:transparent;color:var(--muted);border:1px solid rgba(2,6,23,0.06)}
-  .list{margin-top:18px;display:grid;gap:var(--gap)}
-  .card{background:var(--card);padding:12px;border-radius:var(--radius);box-shadow:0 1px 2px rgba(16,24,40,0.04)}
-  .title{font-weight:700;margin:0 0 6px 0;font-size:1.05rem}
-  .meta{font-size:0.9rem;color:var(--muted);margin-bottom:8px}
-  .excerpt{color:var(--text);opacity:0.95}
-  .empty{padding:18px;color:var(--muted)}
-  .toolbar{display:flex;gap:6px;align-items:center}
-  .fs-btn{padding:6px 8px;border-radius:6px;border:1px solid rgba(0,0,0,0.06);background:transparent;cursor:pointer;color:var(--muted)}
-  .badge{display:inline-block;padding:4px 8px;border-radius:999px;background:rgba(10,132,255,0.12);color:var(--accent);font-size:0.85rem}
-  .split{display:grid;grid-template-columns:1fr 360px;gap:18px;margin-top:16px;}
-  .panel{background:var(--card);padding:12px;border-radius:10px;border:1px solid rgba(2,6,23,0.04)}
-  pre.json-raw{background:#0b0c0f;color:#dfe8f5;padding:12px;border-radius:8px;overflow:auto;font-family:var(--mono);font-size:13px;line-height:1.45}
-  pre.json-raw.light{background:#f4f7fb;color:var(--text);}
-  .error-line{background:rgba(255,100,92,0.12);display:block;padding:0 6px;border-left:3px solid rgba(255,100,92,0.14);}
-  details { margin-top:8px; }
-  .muted-inline{color:var(--muted);font-size:0.9rem}
-  a { color: inherit; text-decoration: none; }
-  .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0; }
-  @media (max-width:880px){
-    .split{grid-template-columns:1fr;}
-  }
-</style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: 'Roboto', sans-serif;
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* --- Sidebar (Navigation) --- */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            transition: transform 0.3s ease;
+        }
+
+        .brand-area {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer; /* クリック可能に */
+        }
+        .brand-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #fff;
+            background: linear-gradient(90deg, #fff, var(--primary-accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-scroller {
+            overflow-y: auto;
+            flex: 1;
+            padding: 1rem 0;
+        }
+        
+        /* スクロールバーのカスタマイズ */
+        .nav-scroller::-webkit-scrollbar,
+        .content-scroll::-webkit-scrollbar {
+            width: 8px;
+        }
+        .nav-scroller::-webkit-scrollbar-thumb,
+        .content-scroll::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        .nav-category {
+            padding: 0.5rem 1.5rem;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            margin-top: 1rem;
+            font-weight: bold;
+            letter-spacing: 0.05em;
+        }
+
+        .nav-item {
+            display: block;
+            padding: 0.6rem 1.5rem;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: 0.2s;
+            border-left: 3px solid transparent;
+        }
+        .nav-item:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: #fff;
+        }
+        .nav-item.active {
+            background-color: rgba(0, 229, 255, 0.1);
+            color: var(--primary-accent);
+            border-left-color: var(--primary-accent);
+        }
+
+        /* --- Main Content Area --- */
+        .main-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .mobile-header {
+            display: none;
+            height: var(--header-height);
+            background: var(--sidebar-bg);
+            align-items: center;
+            padding: 0 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .menu-btn {
+            background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer;
+        }
+
+        .content-scroll {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0; /* paddingを内部コンテナに移動 */
+        }
+
+        /* --- Home View (GitBook Card Style) --- */
+        .home-container {
+            padding: 4rem 4rem;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .hero-section {
+            text-align: left;
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 2rem;
+        }
+        .hero-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 0.5rem;
+        }
+        .hero-desc {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .category-group {
+            margin-bottom: 3rem;
+        }
+        .category-title {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+        }
+        .category-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border-color);
+            margin-left: 1rem;
+        }
+
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .card {
+            background-color: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-4px);
+            border-color: var(--primary-accent);
+            background-color: var(--surface-hover);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-icon {
+            margin-bottom: 1rem;
+            color: var(--primary-accent);
+            font-size: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-meta {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .arrow-icon {
+            opacity: 0;
+            transform: translateX(-10px);
+            transition: 0.2s;
+            color: var(--primary-accent);
+        }
+        .card:hover .arrow-icon {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* --- Article View --- */
+        .article-container {
+            padding: 3rem 4rem;
+            max-width: 900px;
+            margin: 0 auto; /* 中央寄せ */
+        }
+
+        .doc-header { margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; }
+        .doc-title { font-size: 2.2rem; font-weight: 700; margin-bottom: 0.5rem; color: #fff; }
+        .doc-meta { color: var(--text-secondary); font-size: 0.85rem; font-family: monospace; }
+        
+        .doc-body { line-height: 1.8; font-size: 1rem; }
+        
+        /* 独自記法スタイル */
+        .custom-heading { font-size: 1.5rem; color: #fff; margin: 2.5rem 0 1rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--border-color); }
+        .emphasis-block { border-left: 4px solid var(--secondary-accent); background: rgba(179, 136, 255, 0.1); padding: 1rem; margin: 1rem 0; border-radius: 0 4px 4px 0; }
+        .center-text { text-align: center; display: block; margin: 1.5rem 0; }
+        .marker { background: rgba(0, 229, 255, 0.2); color: var(--primary-accent); padding: 0 4px; border-radius: 4px; }
+        .strikethrough { text-decoration: line-through; opacity: 0.6; }
+        a.txt-link { color: var(--primary-accent); text-decoration: none; border-bottom: 1px solid var(--primary-accent); }
+        ul.txt-list { margin-left: 1.5rem; margin-bottom: 1rem; }
+        li { margin-bottom: 0.5rem; }
+        p { margin-bottom: 1.2rem; }
+
+        /* Error Box */
+        .error-box { background: rgba(255, 82, 82, 0.1); border: 1px solid var(--danger-color); padding: 1.5rem; border-radius: 8px; margin-top: 2rem; }
+        .error-title { color: var(--danger-color); font-weight: bold; margin-bottom: 0.5rem; }
+        .error-log { font-family: monospace; font-size: 0.8rem; background: rgba(0,0,0,0.3); padding: 10px; margin-top: 10px; border-radius: 4px; color: #ccc; }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed; z-index: 100; height: 100%; transform: translateX(-100%);
+            }
+            .sidebar.open { transform: translateX(0); }
+            .mobile-header { display: flex; }
+            .home-container { padding: 2rem 1.5rem; }
+            .article-container { padding: 2rem 1.5rem; }
+            .doc-title { font-size: 1.8rem; }
+            .card-grid { grid-template-columns: 1fr; }
+        }
+
+        /* Loading */
+        .loader { display:flex; justify-content:center; align-items:center; height:100%; color: var(--primary-accent); min-height: 200px; }
+    </style>
 </head>
 <body>
-  <div class="wrap" id="app">
-    <header>
-      <div>
-        <h1>Refloria Town — 記事一覧（完全版）</h1>
-        <div class="small">data_1012/kiji/index.json を読み込んで一覧表示します。構文エラー時は該当行を特定して表示します。</div>
-      </div>
 
-      <div class="controls" role="toolbar" aria-label="表示コントロール">
-        <input id="q" type="search" placeholder="検索（タイトル / 抜粋）" aria-label="検索" />
-        <select id="categoryFilter" aria-label="カテゴリで絞り込む">
-          <option value="">すべてのカテゴリ</option>
-        </select>
-        <div class="toolbar" aria-hidden="false" style="align-items:center;">
-          <button id="themeToggle" class="ghost" title="テーマ切替">ダーク</button>
-          <button id="fsDown" class="fs-btn" title="フォントを小さく">小</button>
-          <button id="fsUp" class="fs-btn" title="フォントを大きく">大</button>
+    <nav class="sidebar" id="sidebar">
+        <div class="brand-area" onclick="App.renderHome()">
+            <div class="brand-title">Refloria Town</div>
+            <div style="font-size:0.7rem; color:var(--text-secondary); margin-top:4px;">UNOFFICIAL WIKI</div>
         </div>
-      </div>
-    </header>
+        <div class="nav-scroller" id="nav-container">
+            <!-- Nav items injected here -->
+        </div>
+    </nav>
 
-    <div class="split">
-      <main>
-        <div id="status" class="small" role="status" aria-live="polite">読み込み中...</div>
-        <div id="list" class="list" role="list"></div>
-      </main>
-
-      <aside class="panel" aria-label="デバッグ・操作パネル">
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-          <label class="small" for="upload-index">index.json をアップロード（上書きプレビュー）</label>
-          <input id="upload-index" type="file" accept="application/json" />
+    <div class="main-wrapper">
+        <div class="mobile-header">
+            <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+            <span style="margin-left:1rem; font-weight:bold;">Refloria Town</span>
         </div>
 
-        <div style="margin-top:10px;display:flex;gap:8px;">
-          <button id="download-sample" class="ghost">サンプル index.json をダウンロード</button>
-          <button id="open-raw" class="ghost">JSON 生データを表示</button>
+        <div class="content-scroll" id="scroll-container">
+            <main id="main-content">
+                <div class="loader">Loading...</div>
+            </main>
+            
+            <footer style="margin:4rem auto 2rem; border-top:1px solid var(--border-color); padding-top:2rem; color:var(--text-secondary); font-size:0.8rem; text-align:center; max-width: 900px;">
+                &copy; 2025 Refloria Town Unofficial Archive. <br>
+                Managed via GitHub Pages.
+            </footer>
         </div>
-
-        <details>
-          <summary class="small">構文エラー時のヒント</summary>
-          <ul class="small">
-            <li>「Expected ',' or '}' after property value」などはカンマが抜けている可能性を示します。</li>
-            <li>余分なカンマ（末尾のカンマ）や括弧の閉じ忘れを確認してください。</li>
-            <li>この UI はパースエラーの位置（行・列）を示します。行の周辺を確認してください。</li>
-          </ul>
-        </details>
-
-        <div style="margin-top:12px;">
-          <div class="small muted-inline">生 JSON（読み込んだもの）</div>
-          <pre id="raw" class="json-raw light" aria-live="polite">未読み込み</pre>
-        </div>
-      </aside>
     </div>
-  </div>
 
-<script>
-/*
-  完全版 index.html のスクリプト
-  - デフォルトで ./data_1012/kiji/index.json を fetch して表示
-  - 平坦な配列フォーマットを想定: [{file,title,date,category,excerpt}, ...]
-  - 構文エラー時には JSON.parse の位置情報を解析して行・列を算出し、該当行をハイライト表示
-  - ファイルアップロードでローカルの index.json をプレビュー可能
-  - サンプル JSON をダウンロードするボタンを提供
-  - テーマ・フォントサイズ・検索・カテゴリ絞り込み
-*/
+    <div id="overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:90;" onclick="toggleSidebar()"></div>
 
-(function(){
-  const DEFAULT_INDEX_PATH = './data_1012/kiji/index.json';
-  const SAMPLE = [
-    {
-      "file": "1.txt",
-      "title": "Refloria Townへようこそ！",
-      "date": "2025-12-14",
-      "category": "ようこそ",
-      "excerpt": "Refloria Town GTAロールプレイサーバーへようこそ！公式ではない案内ページです。"
-    }
-  ];
+    <script>
+        const CONFIG = {
+            REAL_PATH: "data_1012/kiji/", 
+            DISPLAY_PATH: "content/kiji/", 
+            INDEX_FILE: "index.json"
+        };
 
-  const els = {
-    status: document.getElementById('status'),
-    list: document.getElementById('list'),
-    q: document.getElementById('q'),
-    categoryFilter: document.getElementById('categoryFilter'),
-    themeToggle: document.getElementById('themeToggle'),
-    fsDown: document.getElementById('fsDown'),
-    fsUp: document.getElementById('fsUp'),
-    uploadIndex: document.getElementById('upload-index'),
-    raw: document.getElementById('raw'),
-    downloadSample: document.getElementById('download-sample'),
-    openRaw: document.getElementById('open-raw')
-  };
+        // --- Core Logic ---
 
-  let data = [];
-  let rawText = '';
-  let currentSource = DEFAULT_INDEX_PATH;
+        const App = {
+            data: null,
 
-  // helpers
-  function setStatus(text, isError){
-    els.status.textContent = text;
-    els.status.style.color = isError ? 'var(--accent)' : '';
-  }
+            init: async () => {
+                await App.loadIndex();
+            },
 
-  function downloadBlob(filename, content, mime='application/json'){
-    const blob = new Blob([content], {type: mime + ';charset=utf-8'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  }
+            loadIndex: async () => {
+                try {
+                    const res = await fetch(`${CONFIG.REAL_PATH}${CONFIG.INDEX_FILE}`);
+                    if (!res.ok) throw new Error(`HTTP_ERROR_${res.status}`);
+                    
+                    try {
+                        App.data = await res.json();
+                    } catch (e) {
+                        throw new Error(`JSON_SYNTAX_ERROR: ${e.message}`);
+                    }
 
-  // position (line, column) from offset
-  function offsetToLineCol(text, offset){
-    const lines = text.slice(0, offset).split(/\r\n|\n|\r/);
-    const line = lines.length;
-    const col = lines[lines.length - 1].length + 1;
-    return { line, col };
-  }
+                    App.renderSidebar(App.data);
+                    
+                    // 変更: 最初の記事を自動ロードするのではなく、ホーム（カード一覧）を表示
+                    App.renderHome();
 
-  // pretty print raw and highlight a line range (startLine..endLine)
-  function renderRaw(text, highlightLine){
-    const lines = text.replace(/\r\n/g,'\n').split('\n');
-    const el = els.raw;
-    el.innerHTML = lines.map((ln, idx) => {
-      const num = idx + 1;
-      const safe = ln.replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      if (highlightLine && num >= highlightLine.start && num <= highlightLine.end) {
-        return `<div class="error-line"><span class="sr-only">行 ${num}: </span><strong> ${num}</strong> ${safe}</div>`;
-      } else {
-        return `<div><span class="sr-only">行 ${num}: </span><span style="opacity:0.6;margin-right:8px">${num}</span> ${safe}</div>`;
-      }
-    }).join('');
-    el.classList.toggle('light', !document.documentElement.hasAttribute('data-theme'));
-  }
+                } catch (err) {
+                    App.renderError("Index Load Failed", err);
+                }
+            },
 
-  function normalizeItem(p, idx){
-    if (!p || typeof p !== 'object') {
-      return { file: String(p || `item-${idx}`), title: String(p || ''), date:'', category:'', excerpt:'' };
-    }
-    return {
-      file: p.file || '',
-      title: p.title || p.file || '',
-      date: p.date || '',
-      category: p.category || '',
-      excerpt: p.excerpt || ''
-    };
-  }
+            renderSidebar: (categories) => {
+                const nav = document.getElementById('nav-container');
+                let html = '';
 
-  function buildCategoryOptions(items){
-    const set = new Set();
-    items.forEach(i => { if (i && i.category) set.add(i.category); });
-    const cats = Array.from(set).sort((a,b)=>a.localeCompare(b,'ja'));
-    els.categoryFilter.innerHTML = '<option value="">すべてのカテゴリ</option>';
-    cats.forEach(c => {
-      const o = document.createElement('option');
-      o.value = c; o.textContent = c;
-      els.categoryFilter.appendChild(o);
-    });
-  }
+                categories.forEach((cat) => {
+                    html += `<div class="nav-category">${cat.category}</div>`;
+                    cat.pages.forEach((page) => {
+                        // data-file属性を追加して後で検索しやすくする
+                        html += `<a class="nav-item" data-file="${page.file}" onclick="App.loadPage('${page.file}', '${page.title}', '${page.date}')">${page.title}</a>`;
+                    });
+                });
 
-  function renderList(items){
-    els.list.innerHTML = '';
-    if (!items.length){
-      els.list.innerHTML = '<div class="empty">該当する記事がありません。</div>';
-      return;
-    }
-    const frag = document.createDocumentFragment();
-    items.forEach(it => {
-      const card = document.createElement('article');
-      card.className = 'card';
-      card.setAttribute('role','listitem');
+                nav.innerHTML = html;
+            },
 
-      const title = document.createElement('h2');
-      title.className = 'title';
-      const a = document.createElement('a');
-      a.href = it.file || '#';
-      a.textContent = it.title || it.file || '(無題)';
-      a.rel = 'noopener';
-      title.appendChild(a);
+            // カード型のホーム画面を表示する機能
+            renderHome: () => {
+                const mainEl = document.getElementById('main-content');
+                const scrollContainer = document.getElementById('scroll-container');
+                
+                // サイドバーのアクティブ状態を解除
+                document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+                
+                // スクロールをトップへ
+                scrollContainer.scrollTop = 0;
 
-      const meta = document.createElement('div');
-      meta.className = 'meta';
-      meta.textContent = `${it.category || 'カテゴリなし'} ・ ${it.date || ''}`;
+                // モバイルサイドバーを閉じる
+                if (window.innerWidth <= 768) {
+                    const sb = document.getElementById('sidebar');
+                    const ov = document.getElementById('overlay');
+                    sb.classList.remove('open');
+                    ov.style.display = 'none';
+                }
 
-      const excerpt = document.createElement('div');
-      excerpt.className = 'excerpt';
-      excerpt.textContent = it.excerpt || '';
+                if (!App.data) return;
 
-      card.appendChild(title);
-      card.appendChild(meta);
-      if (excerpt.textContent) card.appendChild(excerpt);
-      frag.appendChild(card);
-    });
-    els.list.appendChild(frag);
-  }
+                let html = `
+                    <div class="home-container">
+                        <div class="hero-section">
+                            <h1 class="hero-title">Refloria Town Wiki</h1>
+                            <p class="hero-desc">Welcome to the unofficial information archive. Explore the documents below.</p>
+                        </div>
+                `;
 
-  function applyFilters(){
-    const q = (els.q.value || '').trim().toLowerCase();
-    const cat = els.categoryFilter.value;
-    const filtered = data.filter(i => {
-      if (!i) return false;
-      if (cat && i.category !== cat) return false;
-      if (!q) return true;
-      const hay = ((i.title||'') + ' ' + (i.excerpt||'') + ' ' + (i.file||'')).toLowerCase();
-      return hay.indexOf(q) !== -1;
-    });
-    renderList(filtered);
-    setStatus(`表示中: ${filtered.length} / ${data.length}`);
-  }
+                App.data.forEach(cat => {
+                    html += `
+                        <div class="category-group">
+                            <div class="category-title">${cat.category}</div>
+                            <div class="card-grid">
+                    `;
+                    
+                    cat.pages.forEach(page => {
+                        html += `
+                            <div class="card" onclick="App.loadPage('${page.file}', '${page.title}', '${page.date}')">
+                                <div class="card-icon">📄</div>
+                                <div class="card-title">${page.title}</div>
+                                <div class="card-meta">
+                                    <span>Last updated: ${page.date}</span>
+                                    <span class="arrow-icon">→</span>
+                                </div>
+                            </div>
+                        `;
+                    });
 
-  // Attempt to parse JSON and show helpful errors
-  function parseIndexJson(text){
-    try {
-      const parsed = JSON.parse(text);
-      if (!Array.isArray(parsed)) {
-        throw new Error('index.json は配列である必要があります（例: [ {file,title,date,category,excerpt}, ... ]）');
-      }
-      return { parsed };
-    } catch (e) {
-      // try to extract position if present (e.g. "in JSON at position 157")
-      const msg = e && e.message ? e.message : String(e);
-      let position = null;
-      const m = msg.match(/at position (\d+)/i);
-      if (m) position = Number(m[1]);
-      // Some engines (Firefox) report "JSON.parse: expected '}'" but without position.
-      return { error: e, position, message: msg };
-    }
-  }
+                    html += `</div></div>`; // Close grid and group
+                });
 
-  // Load index.json from path (or from given text)
-  async function loadIndexFromPath(path){
-    currentSource = path || DEFAULT_INDEX_PATH;
-    try {
-      setStatus('読み込み中...');
-      const res = await fetch(currentSource, {cache:'no-store'});
-      if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
-      rawText = await res.text();
-      els.raw.textContent = ''; // clear until renderRaw called
-      const result = parseIndexJson(rawText);
-      if (result.parsed) {
-        data = result.parsed.map(normalizeItem);
-        buildCategoryOptions(data);
-        renderRaw(rawText); // show raw without highlights
-        applyFilters();
-        setStatus(`読み込み完了: ${data.length} 件`);
-      } else {
-        // show parse error with line/col if possible
-        let highlight = null;
-        if (result.position !== null) {
-          const pos = result.position;
-          const lc = offsetToLineCol(rawText, pos);
-          highlight = { start: Math.max(1, lc.line-2), end: Math.min(rawText.split(/\r\n|\n|\r/).length, lc.line+2) };
-          setStatus(`構文エラー: 位置 ${pos} （行 ${lc.line} 列 ${lc.col}）。カンマや括弧の位置を確認してください。`, true);
-        } else {
-          setStatus('JSON の解析に失敗しました（構文エラーの可能性）。カンマや括弧を確認してください。', true);
+                html += `</div>`; // Close home-container
+                mainEl.innerHTML = html;
+            },
+
+            loadPage: async (fileName, title, date) => {
+                const mainEl = document.getElementById('main-content');
+                const scrollContainer = document.getElementById('scroll-container');
+                
+                // Active State Update (全nav-itemを走査して一致するものをアクティブに)
+                document.querySelectorAll('.nav-item').forEach(el => {
+                    el.classList.remove('active');
+                    if (el.getAttribute('data-file') === fileName) {
+                        el.classList.add('active');
+                    }
+                });
+                
+                // Mobile Sidebar Close
+                if (window.innerWidth <= 768) {
+                    const sb = document.getElementById('sidebar');
+                    const ov = document.getElementById('overlay');
+                    sb.classList.remove('open');
+                    ov.style.display = 'none';
+                }
+
+                // スクロール位置をリセット
+                scrollContainer.scrollTop = 0;
+
+                mainEl.innerHTML = '<div class="loader">Loading Document...</div>';
+
+                try {
+                    const res = await fetch(`${CONFIG.REAL_PATH}${fileName}`);
+                    let content = "";
+                    
+                    if (res.ok) {
+                        content = await res.text();
+                    } else {
+                        throw new Error(`FILE_NOT_FOUND: ${fileName}`);
+                    }
+
+                    const htmlContent = parseTextToHtml(content);
+
+                    mainEl.innerHTML = `
+                        <article class="article-container">
+                            <header class="doc-header">
+                                <h1 class="doc-title">${title}</h1>
+                                <div class="doc-meta">Last Updated: ${date}</div>
+                            </header>
+                            <div class="doc-body">
+                                ${htmlContent}
+                            </div>
+                        </article>
+                    `;
+
+                } catch (err) {
+                    App.renderError("Content Load Failed", err);
+                }
+            },
+
+            renderError: (title, err) => {
+                const mainEl = document.getElementById('main-content');
+                let msg = err.message;
+                
+                if (msg.includes('JSON_SYNTAX_ERROR')) {
+                    msg = "index.json の構文エラーです。カンマ(,)の位置を確認してください。";
+                } else if (msg.includes('FILE_NOT_FOUND')) {
+                    msg = "指定されたテキストファイルが見つかりません。";
+                }
+
+                mainEl.innerHTML = `
+                    <div style="padding: 2rem;">
+                        <div class="error-box">
+                            <div class="error-title">⚠️ ${title}</div>
+                            <p>${msg}</p>
+                            <div class="error-log">Tech Info: ${err.message}<br>Path: ${CONFIG.DISPLAY_PATH}</div>
+                        </div>
+                    </div>
+                `;
+            }
+        };
+
+        // --- Helper Functions ---
+
+        function toggleSidebar() {
+            const sb = document.getElementById('sidebar');
+            const ov = document.getElementById('overlay');
+            const isOpen = sb.classList.contains('open');
+            
+            if (isOpen) {
+                sb.classList.remove('open');
+                ov.style.display = 'none';
+            } else {
+                sb.classList.add('open');
+                ov.style.display = 'block';
+            }
         }
-        renderRaw(rawText, highlight);
-        console.error('JSON parse error:', result.error || result.message);
-      }
-    } catch (e) {
-      setStatus('読み込みに失敗しました: ' + e.message, true);
-      els.raw.textContent = '読み込みできませんでした: ' + e.message;
-      els.list.innerHTML = '';
-      console.error(e);
-    }
-  }
 
-  // Load from uploaded file
-  els.uploadIndex.addEventListener('change', (ev) => {
-    const f = ev.target.files && ev.target.files[0];
-    if (!f) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      rawText = typeof reader.result === 'string' ? reader.result : '';
-      const result = parseIndexJson(rawText);
-      if (result.parsed) {
-        data = result.parsed.map(normalizeItem);
-        buildCategoryOptions(data);
-        renderRaw(rawText);
-        applyFilters();
-        setStatus(`アップロード読み込み完了: ${data.length} 件`);
-      } else {
-        let highlight = null;
-        if (result.position !== null) {
-          const lc = offsetToLineCol(rawText, result.position);
-          highlight = { start: Math.max(1, lc.line-2), end: Math.min(rawText.split(/\r\n|\n|\r/).length, lc.line+2) };
-          setStatus(`構文エラー: 位置 ${result.position} （行 ${lc.line} 列 ${lc.col}）。カンマや括弧の位置を確認してください。`, true);
-        } else {
-          setStatus('アップロードした JSON の解析に失敗しました（構文エラー）。', true);
+        function parseTextToHtml(text) {
+            if (!text) return "";
+            let html = text
+                .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+            // 独自記法
+            html = html.replace(/^\/:\/\s*(.+)$/gm, '<h2 class="custom-heading">\$1</h2>');
+            html = html.replace(/^\|\s*(.+)$/gm, '<div class="emphasis-block">\$1</div>');
+            html = html.replace(/^-\s*(.+)$/gm, '<ul class="txt-list"><li>\$1</li></ul>');
+            html = html.replace(/->\s*(.+?)\s*<-/g, '<div class="center-text">\$1</div>');
+            html = html.replace(/::(.+?)::/g, '<span class="marker">\$1</span>');
+            html = html.replace(/~~(.+?)~~/g, '<span class="strikethrough">\$1</span>');
+            html = html.replace(/\*\*\*#([a-fA-F0-9]{3,6})\*(.+?)\*\*\*/g, '<span style="color:#\$1">\$2</span>');
+            html = html.replace(/\*\*(.+?)\*\*/g, '<strong>\$1</strong>');
+            html = html.replace(/\[(.+?)\]\((.+?)\)/g, '<a href="\$2" target="_blank" class="txt-link">\$1</a>');
+            html = html.replace(/\*(.+?)\*/g, '<em>\$1</em>');
+            
+            // 段落処理
+            html = html.replace(/\n\n/g, '</p><p>');
+            html = html.replace(/\n/g, '<br>');
+            
+            html = '<p>' + html + '</p>';
+            
+            // クリーンアップ
+            html = html.replace(/<p><\/p>/g, '');
+            html = html.replace(/<p><h2/g, '<h2').replace(/<\/h2><\/p>/g, '</h2>');
+            html = html.replace(/<p><div/g, '<div').replace(/<\/div><\/p>/g, '</div>');
+
+            return html;
         }
-        renderRaw(rawText, highlight);
-        console.error('Upload JSON parse error:', result.error || result.message);
-      }
-      // clear input so same file can be reselected later
-      els.uploadIndex.value = '';
-    };
-    reader.onerror = () => {
-      setStatus('ファイルの読み取り中にエラーが発生しました。', true);
-      els.uploadIndex.value = '';
-    };
-    reader.readAsText(f, 'utf-8');
-  });
 
-  // Show raw JSON panel (toggle)
-  els.openRaw.addEventListener('click', () => {
-    const r = els.raw;
-    if (r.style.display === 'none' || r.style.display === '') {
-      r.style.display = 'block';
-      els.openRaw.textContent = 'JSON 生データを隠す';
-    } else {
-      r.style.display = 'none';
-      els.openRaw.textContent = 'JSON 生データを表示';
-    }
-  });
-
-  // Download sample index.json
-  els.downloadSample.addEventListener('click', () => {
-    downloadBlob('index.sample.json', JSON.stringify(SAMPLE, null, 2));
-  });
-
-  // Bind search & filter
-  els.q.addEventListener('input', debounce(applyFilters, 180));
-  els.categoryFilter.addEventListener('change', applyFilters);
-
-  // Theme toggle
-  els.themeToggle.addEventListener('click', () => {
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    if (isDark) {
-      document.documentElement.removeAttribute('data-theme');
-      els.themeToggle.textContent = 'ダーク';
-      localStorage.setItem('refloria_theme','light');
-    } else {
-      document.documentElement.setAttribute('data-theme','dark');
-      els.themeToggle.textContent = 'ライト';
-      localStorage.setItem('refloria_theme','dark');
-    }
-    // update raw pre class for readability
-    renderRaw(rawText || JSON.stringify(SAMPLE, null, 2));
-  });
-
-  // Font control
-  els.fsDown.addEventListener('click', () => adjustBaseFont(-1));
-  els.fsUp.addEventListener('click', () => adjustBaseFont(1));
-
-  function adjustBaseFont(delta){
-    const s = getComputedStyle(document.documentElement).getPropertyValue('--base').trim();
-    const n = parseFloat(s) || 16;
-    const next = Math.max(12, Math.min(24, n + delta));
-    document.documentElement.style.setProperty('--base', next + 'px');
-    localStorage.setItem('refloria_base', next + 'px');
-  }
-
-  // restore preferences
-  (function restorePrefs(){
-    const theme = localStorage.getItem('refloria_theme');
-    if (theme === 'dark') {
-      document.documentElement.setAttribute('data-theme','dark');
-      els.themeToggle.textContent = 'ライト';
-    } else {
-      els.themeToggle.textContent = 'ダーク';
-    }
-    const base = localStorage.getItem('refloria_base');
-    if (base) document.documentElement.style.setProperty('--base', base);
-  })();
-
-  // initial load
-  loadIndexFromPath(DEFAULT_INDEX_PATH);
-
-  // small helpers
-  function debounce(fn, wait){
-    let t;
-    return function(...args){
-      clearTimeout(t);
-      t = setTimeout(()=>fn.apply(this,args), wait);
-    };
-  }
-
-})();
-</script>
+        document.addEventListener('DOMContentLoaded', App.init);
+    </script>
 </body>
 </html>
