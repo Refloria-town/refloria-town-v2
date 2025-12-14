@@ -14,7 +14,7 @@
             --bg-color: #0f1115;
             --sidebar-bg: #16181d;
             --surface-color: #1e1e1e;
-            --surface-hover: #26292e; /* カードホバー用 */
+            --surface-hover: #26292e;
             --primary-accent: #00e5ff;
             --secondary-accent: #b388ff;
             --text-primary: #e0e0e0;
@@ -51,7 +51,7 @@
         .brand-area {
             padding: 1.5rem;
             border-bottom: 1px solid var(--border-color);
-            cursor: pointer; /* クリック可能に */
+            cursor: pointer;
         }
         .brand-title {
             font-size: 1.2rem;
@@ -68,7 +68,6 @@
             padding: 1rem 0;
         }
         
-        /* スクロールバーのカスタマイズ */
         .nav-scroller::-webkit-scrollbar,
         .content-scroll::-webkit-scrollbar {
             width: 8px;
@@ -132,10 +131,10 @@
         .content-scroll {
             flex: 1;
             overflow-y: auto;
-            padding: 0; /* paddingを内部コンテナに移動 */
+            padding: 0;
         }
 
-        /* --- Home View (GitBook Card Style) --- */
+        /* --- Home View (Cards) --- */
         .home-container {
             padding: 4rem 4rem;
             max-width: 1200px;
@@ -200,12 +199,18 @@
             position: relative;
             overflow: hidden;
         }
-
         .card:hover {
             transform: translateY(-4px);
             border-color: var(--primary-accent);
             background-color: var(--surface-hover);
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+        /* お知らせカード用の特別スタイル */
+        .card.announce-card {
+            border-left: 3px solid var(--secondary-accent);
+        }
+        .card.announce-card .card-icon {
+            color: var(--secondary-accent);
         }
 
         .card-icon {
@@ -213,14 +218,13 @@
             color: var(--primary-accent);
             font-size: 1.5rem;
         }
-
         .card-title {
             font-size: 1.1rem;
             font-weight: 600;
             color: #fff;
             margin-bottom: 0.5rem;
+            line-height: 1.4;
         }
-
         .card-meta {
             font-size: 0.8rem;
             color: var(--text-secondary);
@@ -245,7 +249,7 @@
         .article-container {
             padding: 3rem 4rem;
             max-width: 900px;
-            margin: 0 auto; /* 中央寄せ */
+            margin: 0 auto;
         }
 
         .doc-header { margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; }
@@ -254,7 +258,9 @@
         
         .doc-body { line-height: 1.8; font-size: 1rem; }
         
-        /* 独自記法スタイル */
+        /* 独自記法 & 画像スタイル */
+        .embedded-img { max-width: 100%; height: auto; border-radius: 8px; margin: 1.5rem 0; border: 1px solid var(--border-color); display: block; }
+        
         .custom-heading { font-size: 1.5rem; color: #fff; margin: 2.5rem 0 1rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--border-color); }
         .emphasis-block { border-left: 4px solid var(--secondary-accent); background: rgba(179, 136, 255, 0.1); padding: 1rem; margin: 1rem 0; border-radius: 0 4px 4px 0; }
         .center-text { text-align: center; display: block; margin: 1.5rem 0; }
@@ -322,7 +328,8 @@
     <script>
         const CONFIG = {
             REAL_PATH: "data_1012/kiji/", 
-            DISPLAY_PATH: "content/kiji/", 
+            ANNOUNCE_PATH: "data_1010/announce.txt",
+            IMG_PATH: "data_pic/",
             INDEX_FILE: "index.json"
         };
 
@@ -330,29 +337,52 @@
 
         const App = {
             data: null,
+            announcements: [],
 
             init: async () => {
-                await App.loadIndex();
+                await App.loadAllData();
             },
 
-            loadIndex: async () => {
+            loadAllData: async () => {
                 try {
-                    const res = await fetch(`${CONFIG.REAL_PATH}${CONFIG.INDEX_FILE}`);
-                    if (!res.ok) throw new Error(`HTTP_ERROR_${res.status}`);
-                    
+                    // index.json と announce.txt を並列で読み込む
+                    const [indexRes, announceRes] = await Promise.all([
+                        fetch(`${CONFIG.REAL_PATH}${CONFIG.INDEX_FILE}`),
+                        fetch(`${CONFIG.ANNOUNCE_PATH}`)
+                    ]);
+
+                    // 1. 記事インデックスの処理
+                    if (!indexRes.ok) throw new Error(`HTTP_ERROR_INDEX_${indexRes.status}`);
                     try {
-                        App.data = await res.json();
+                        App.data = await indexRes.json();
                     } catch (e) {
                         throw new Error(`JSON_SYNTAX_ERROR: ${e.message}`);
                     }
 
+                    // 2. お知らせデータの処理 (announce.txt)
+                    if (announceRes.ok) {
+                        const text = await announceRes.text();
+                        // 改行で分割し、空行を除去
+                        const lines = text.split(/\r\n|\n/).filter(line => line.trim() !== "");
+                        
+                        // 奇数行=タイトル, 偶数行=本文 としてペアリング
+                        for (let i = 0; i < lines.length; i += 2) {
+                            if (i + 1 < lines.length) {
+                                App.announcements.push({
+                                    title: lines[i],
+                                    content: lines[i+1]
+                                });
+                            }
+                        }
+                    } else {
+                        console.warn("Announce file not found or empty.");
+                    }
+
                     App.renderSidebar(App.data);
-                    
-                    // 変更: 最初の記事を自動ロードするのではなく、ホーム（カード一覧）を表示
                     App.renderHome();
 
                 } catch (err) {
-                    App.renderError("Index Load Failed", err);
+                    App.renderError("Data Load Failed", err);
                 }
             },
 
@@ -360,10 +390,10 @@
                 const nav = document.getElementById('nav-container');
                 let html = '';
 
+                // Wikiの記事
                 categories.forEach((cat) => {
                     html += `<div class="nav-category">${cat.category}</div>`;
                     cat.pages.forEach((page) => {
-                        // data-file属性を追加して後で検索しやすくする
                         html += `<a class="nav-item" data-file="${page.file}" onclick="App.loadPage('${page.file}', '${page.title}', '${page.date}')">${page.title}</a>`;
                     });
                 });
@@ -371,24 +401,14 @@
                 nav.innerHTML = html;
             },
 
-            // カード型のホーム画面を表示する機能
+            // ホーム画面（カード一覧）
             renderHome: () => {
                 const mainEl = document.getElementById('main-content');
                 const scrollContainer = document.getElementById('scroll-container');
                 
-                // サイドバーのアクティブ状態を解除
                 document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-                
-                // スクロールをトップへ
                 scrollContainer.scrollTop = 0;
-
-                // モバイルサイドバーを閉じる
-                if (window.innerWidth <= 768) {
-                    const sb = document.getElementById('sidebar');
-                    const ov = document.getElementById('overlay');
-                    sb.classList.remove('open');
-                    ov.style.display = 'none';
-                }
+                if (window.innerWidth <= 768) toggleSidebar(false);
 
                 if (!App.data) return;
 
@@ -396,58 +416,70 @@
                     <div class="home-container">
                         <div class="hero-section">
                             <h1 class="hero-title">Refloria Town Wiki</h1>
-                            <p class="hero-desc">Welcome to the unofficial information archive. Explore the documents below.</p>
+                            <p class="hero-desc">Welcome to the unofficial information archive.</p>
                         </div>
                 `;
 
+                // --- お知らせセクション (存在する場合) ---
+                if (App.announcements.length > 0) {
+                    html += `
+                        <div class="category-group">
+                            <div class="category-title" style="color:var(--secondary-accent);">📢 Announcements</div>
+                            <div class="card-grid">
+                    `;
+                    App.announcements.forEach((ann, index) => {
+                        // indexを引数にして openAnnouncement を呼ぶ
+                        html += `
+                            <div class="card announce-card" onclick="App.openAnnouncement(${index})">
+                                <div class="card-icon">🔔</div>
+                                <div class="card-title">${ann.title}</div>
+                                <div class="card-meta">
+                                    <span>Official Info</span>
+                                    <span class="arrow-icon">→</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    html += `</div></div>`;
+                }
+
+                // --- Wiki記事セクション ---
                 App.data.forEach(cat => {
                     html += `
                         <div class="category-group">
                             <div class="category-title">${cat.category}</div>
                             <div class="card-grid">
                     `;
-                    
                     cat.pages.forEach(page => {
                         html += `
                             <div class="card" onclick="App.loadPage('${page.file}', '${page.title}', '${page.date}')">
                                 <div class="card-icon">📄</div>
                                 <div class="card-title">${page.title}</div>
                                 <div class="card-meta">
-                                    <span>Last updated: ${page.date}</span>
+                                    <span>${page.date}</span>
                                     <span class="arrow-icon">→</span>
                                 </div>
                             </div>
                         `;
                     });
-
-                    html += `</div></div>`; // Close grid and group
+                    html += `</div></div>`;
                 });
 
-                html += `</div>`; // Close home-container
+                html += `</div>`;
                 mainEl.innerHTML = html;
             },
 
+            // 通常記事の読み込み
             loadPage: async (fileName, title, date) => {
                 const mainEl = document.getElementById('main-content');
                 const scrollContainer = document.getElementById('scroll-container');
                 
-                // Active State Update (全nav-itemを走査して一致するものをアクティブに)
                 document.querySelectorAll('.nav-item').forEach(el => {
                     el.classList.remove('active');
-                    if (el.getAttribute('data-file') === fileName) {
-                        el.classList.add('active');
-                    }
+                    if (el.getAttribute('data-file') === fileName) el.classList.add('active');
                 });
                 
-                // Mobile Sidebar Close
-                if (window.innerWidth <= 768) {
-                    const sb = document.getElementById('sidebar');
-                    const ov = document.getElementById('overlay');
-                    sb.classList.remove('open');
-                    ov.style.display = 'none';
-                }
-
-                // スクロール位置をリセット
+                if (window.innerWidth <= 768) toggleSidebar(false);
                 scrollContainer.scrollTop = 0;
 
                 mainEl.innerHTML = '<div class="loader">Loading Document...</div>';
@@ -481,12 +513,38 @@
                 }
             },
 
+            // お知らせの詳細表示 (テキストデータから直接表示)
+            openAnnouncement: (index) => {
+                const mainEl = document.getElementById('main-content');
+                const scrollContainer = document.getElementById('scroll-container');
+                const ann = App.announcements[index];
+
+                document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+                if (window.innerWidth <= 768) toggleSidebar(false);
+                scrollContainer.scrollTop = 0;
+
+                // 本文もパースする（画像などが含まれる可能性があるため）
+                const htmlContent = parseTextToHtml(ann.content);
+
+                mainEl.innerHTML = `
+                    <article class="article-container">
+                        <header class="doc-header">
+                            <h1 class="doc-title" style="color:var(--secondary-accent);">${ann.title}</h1>
+                            <div class="doc-meta">Category: Announcement</div>
+                        </header>
+                        <div class="doc-body">
+                            ${htmlContent}
+                        </div>
+                    </article>
+                `;
+            },
+
             renderError: (title, err) => {
                 const mainEl = document.getElementById('main-content');
                 let msg = err.message;
                 
                 if (msg.includes('JSON_SYNTAX_ERROR')) {
-                    msg = "index.json の構文エラーです。カンマ(,)の位置を確認してください。";
+                    msg = "index.json の構文エラーです。";
                 } else if (msg.includes('FILE_NOT_FOUND')) {
                     msg = "指定されたテキストファイルが見つかりません。";
                 }
@@ -496,7 +554,7 @@
                         <div class="error-box">
                             <div class="error-title">⚠️ ${title}</div>
                             <p>${msg}</p>
-                            <div class="error-log">Tech Info: ${err.message}<br>Path: ${CONFIG.DISPLAY_PATH}</div>
+                            <div class="error-log">${err.message}</div>
                         </div>
                     </div>
                 `;
@@ -505,12 +563,11 @@
 
         // --- Helper Functions ---
 
-        function toggleSidebar() {
+        function toggleSidebar(forceState) {
             const sb = document.getElementById('sidebar');
             const ov = document.getElementById('overlay');
-            const isOpen = sb.classList.contains('open');
             
-            if (isOpen) {
+            if (forceState === false || (forceState === undefined && sb.classList.contains('open'))) {
                 sb.classList.remove('open');
                 ov.style.display = 'none';
             } else {
@@ -519,17 +576,22 @@
             }
         }
 
+        // テキストパーサー (Wiki記法 + 画像記法)
         function parseTextToHtml(text) {
             if (!text) return "";
             let html = text
                 .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+            // 画像埋め込み: ::pic:filename.jpg::
+            // data_pic/filename.jpg を参照する
+            html = html.replace(/::pic:(.+?)::/g, '&lt;img src="' + CONFIG.IMG_PATH + '$1" class="embedded-img" alt="$1" loading="lazy"&gt;');
 
             // 独自記法
             html = html.replace(/^\/:\/\s*(.+)$/gm, '<h2 class="custom-heading">\$1</h2>');
             html = html.replace(/^\|\s*(.+)$/gm, '<div class="emphasis-block">\$1</div>');
             html = html.replace(/^-\s*(.+)$/gm, '<ul class="txt-list"><li>\$1</li></ul>');
             html = html.replace(/->\s*(.+?)\s*<-/g, '<div class="center-text">\$1</div>');
-            html = html.replace(/::(.+?)::/g, '<span class="marker">\$1</span>');
+            html = html.replace(/::(.+?)::/g, '<span class="marker">\$1</span>'); // 画像と競合しないよう注意（画像はpic:を含む）
             html = html.replace(/~~(.+?)~~/g, '<span class="strikethrough">\$1</span>');
             html = html.replace(/\*\*\*#([a-fA-F0-9]{3,6})\*(.+?)\*\*\*/g, '<span style="color:#\$1">\$2</span>');
             html = html.replace(/\*\*(.+?)\*\*/g, '<strong>\$1</strong>');
@@ -539,13 +601,13 @@
             // 段落処理
             html = html.replace(/\n\n/g, '</p><p>');
             html = html.replace(/\n/g, '<br>');
-            
             html = '<p>' + html + '</p>';
             
             // クリーンアップ
             html = html.replace(/<p><\/p>/g, '');
             html = html.replace(/<p><h2/g, '<h2').replace(/<\/h2><\/p>/g, '</h2>');
             html = html.replace(/<p><div/g, '<div').replace(/<\/div><\/p>/g, '</div>');
+            html = html.replace(/<p><img/g, '<img').replace(/>\s*<\/p>/g, '>');
 
             return html;
         }
