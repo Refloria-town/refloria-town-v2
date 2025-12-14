@@ -4,39 +4,26 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Refloria Town Information</title>
-    <meta name="description" content="Refloria Town 非公式情報サイト v2">
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
 
     <style>
-        /* * Core Design Variables & Reset 
-         */
         :root {
             --bg-color: #121212;
-            --surface-color: #1e1e1e;
             --surface-glass: rgba(30, 30, 30, 0.75);
-            --primary-accent: #00e5ff; /* Cyan for futuristic vibe */
-            --secondary-accent: #b388ff; /* Soft purple */
+            --primary-accent: #00e5ff;
+            --secondary-accent: #b388ff;
             --text-primary: #ffffff;
             --text-secondary: #b0b0b0;
-            --border-color: rgba(255, 255, 255, 0.1);
             --danger-color: #ff5252;
-            --badge-bg: rgba(0, 229, 255, 0.15);
-            
+            --warning-color: #ffab40;
             --font-main: 'Roboto', sans-serif;
-            --radius-md: 12px;
             --radius-lg: 16px;
-            --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.4);
-            --transition-speed: 0.3s;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
             background-color: var(--bg-color);
@@ -45,353 +32,221 @@
                 radial-gradient(circle at 90% 80%, rgba(179, 136, 255, 0.05) 0%, transparent 40%);
             color: var(--text-primary);
             font-family: var(--font-main);
-            line-height: 1.6;
             min-height: 100vh;
-            overflow-x: hidden;
         }
 
-        /* * Typography & Custom Syntax Styling
-         */
-        h1, h2, h3 { font-weight: 700; letter-spacing: 0.5px; }
-        a { text-decoration: none; color: inherit; }
-
-        /* Syntax: /:/ Heading */
+        /* Syntax Styling Extended */
         .custom-heading {
-            font-size: 1.4rem;
-            color: var(--primary-accent);
-            margin: 1.5rem 0 0.8rem 0;
-            padding-bottom: 0.5rem;
-            border-bottom: 1px solid var(--border-color);
+            font-size: 1.4rem; color: var(--primary-accent);
+            margin: 1.5rem 0 0.8rem 0; padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
         }
-
-        /* Syntax: | Emphasis Block */
         .emphasis-block {
             border-left: 4px solid var(--secondary-accent);
             background: rgba(255, 255, 255, 0.03);
-            padding: 0.8rem 1rem;
-            margin: 0.8rem 0;
-            border-radius: 0 4px 4px 0;
+            padding: 0.8rem 1rem; margin: 0.8rem 0;
             color: var(--text-secondary);
         }
-
-        /* Syntax: **Bold** */
+        .center-text { text-align: center; display: block; margin: 1rem 0; }
+        .marker { background: rgba(0, 229, 255, 0.2); color: #fff; padding: 0 4px; border-radius: 4px; }
+        .strikethrough { text-decoration: line-through; opacity: 0.6; }
         strong { color: #fff; font-weight: 700; }
+        a.txt-link { color: var(--primary-accent); text-decoration: underline; }
+        ul.txt-list { margin-left: 1.5rem; margin-bottom: 1rem; color: var(--text-secondary); }
+        ul.txt-list li { margin-bottom: 0.3rem; }
 
-        /* Syntax: *Italic* */
-        em { font-style: italic; opacity: 0.9; }
-
-        /* * Layout Components 
-         */
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 2rem 1.5rem;
-        }
-
-        /* Header */
-        header {
-            text-align: center;
-            margin-bottom: 4rem;
-            position: relative;
-            animation: fadeIn 1s ease-out;
-        }
-
+        /* Layout */
+        .container { max-width: 1000px; margin: 0 auto; padding: 2rem 1.5rem; }
+        header { text-align: center; margin-bottom: 4rem; animation: fadeIn 1s ease-out; }
         .site-title {
-            font-size: 2.5rem;
-            margin-bottom: 0.5rem;
+            font-size: 2.5rem; margin-bottom: 0.5rem;
             background: linear-gradient(135deg, #fff 0%, var(--primary-accent) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         }
-
         .unofficial-badge {
-            display: inline-block;
-            font-size: 0.75rem;
-            font-weight: 500;
-            letter-spacing: 1px;
-            padding: 4px 12px;
-            border: 1px solid var(--danger-color);
-            color: var(--danger-color);
-            border-radius: 20px;
-            margin-bottom: 1rem;
-            text-transform: uppercase;
+            display: inline-block; padding: 4px 12px; border: 1px solid var(--danger-color);
+            color: var(--danger-color); border-radius: 20px; font-size: 0.75rem; margin-bottom: 1rem;
         }
 
-        .site-desc { color: var(--text-secondary); }
-
-        /* Cards Grid */
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 2rem;
-        }
-
-        /* Card Component */
+        /* Cards */
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 2rem; }
         .card {
-            background: var(--surface-glass);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-lg);
-            padding: 1.5rem;
-            box-shadow: var(--shadow-card);
-            transition: transform var(--transition-speed), box-shadow var(--transition-speed), border-color var(--transition-speed);
-            opacity: 0; /* For scroll animation */
-            transform: translateY(20px);
-            display: flex;
-            flex-direction: column;
-            position: relative;
-            overflow: hidden;
+            background: var(--surface-glass); backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1); border-radius: var(--radius-lg);
+            padding: 1.5rem; transition: 0.3s; opacity: 0; transform: translateY(20px);
+            display: flex; flex-direction: column;
         }
+        .card:hover { transform: translateY(-5px); border-color: rgba(0, 229, 255, 0.4); }
+        .card-header { display: flex; justify-content: space-between; margin-bottom: 1rem; font-size: 0.85rem; color: #888; }
+        .card-title { font-size: 1.25rem; margin-bottom: 1rem; }
+        .card-content { font-size: 0.95rem; color: #d0d0d0; line-height: 1.7; }
 
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 40px rgba(0, 229, 255, 0.15);
-            border-color: rgba(0, 229, 255, 0.4);
+        /* Error & Loading */
+        .loader { text-align: center; padding: 2rem; color: var(--primary-accent); animation: pulse 1.5s infinite; }
+        .error-box {
+            background: rgba(255, 82, 82, 0.1); border: 1px solid var(--danger-color);
+            padding: 2rem; border-radius: var(--radius-lg); text-align: center; margin-top: 2rem;
         }
+        .error-title { color: var(--danger-color); font-size: 1.2rem; margin-bottom: 1rem; font-weight: bold; }
+        .error-detail { color: #ccc; font-family: monospace; font-size: 0.9rem; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 6px; display: inline-block; text-align: left; }
 
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1rem;
-        }
-
-        .card-date {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            font-family: monospace;
-        }
-
-        .card-title {
-            font-size: 1.25rem;
-            margin-bottom: 1rem;
-            line-height: 1.4;
-        }
-
-        .card-content {
-            font-size: 0.95rem;
-            color: #d0d0d0;
-            flex-grow: 1;
-        }
-
-        /* Draft Badge */
-        .draft-badge {
-            background-color: var(--danger-color);
-            color: #000;
-            font-size: 0.7rem;
-            font-weight: bold;
-            padding: 2px 8px;
-            border-radius: 4px;
-            margin-left: 10px;
-        }
-
-        /* Loading State */
-        .loader {
-            text-align: center;
-            padding: 2rem;
-            color: var(--primary-accent);
-            font-family: monospace;
-            animation: pulse 1.5s infinite;
-        }
-
-        /* Footer */
-        footer {
-            text-align: center;
-            margin-top: 4rem;
-            padding: 2rem;
-            color: var(--text-secondary);
-            font-size: 0.8rem;
-            border-top: 1px solid var(--border-color);
-        }
-
-        /* Animations */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes pulse {
-            0% { opacity: 0.5; }
-            50% { opacity: 1; }
-            100% { opacity: 0.5; }
-        }
-
-        .fade-in-up {
-            animation: fadeInUp 0.6s ease-out forwards;
-        }
-
-        @keyframes fadeInUp {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        /* Accessibility */
-        @media (prefers-reduced-motion: reduce) {
-            * {
-                animation-duration: 0.01ms !important;
-                animation-iteration-count: 1 !important;
-                transition-duration: 0.01ms !important;
-                scroll-behavior: auto !important;
-            }
-        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+        .fade-in-up { animation: fadeInUp 0.6s ease-out forwards; }
+        @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
-
     <div class="container">
         <header>
             <div id="status-container"></div>
             <h1 class="site-title">Refloria Town Information</h1>
-            <p class="site-desc">Refloria Town コミュニティのための情報アーカイブ</p>
+            <p style="color:var(--text-secondary)">Refloria Town コミュニティのための情報アーカイブ</p>
         </header>
-
-        <main id="app">
-            <div class="loader">Connect to Content...</div>
-        </main>
-
-        <footer>
-            &copy; 2025 Refloria Town Unofficial Archive. <br>
-            Content managed via GitHub.
+        <main id="app"><div class="loader">Loading Content...</div></main>
+        <footer style="text-align:center; margin-top:4rem; color:var(--text-secondary); font-size:0.8rem;">
+            &copy; 2025 Refloria Town Unofficial Archive.
         </footer>
     </div>
 
     <script>
-        /**
-         * Configuration
-         */
         const CONFIG = {
-            SITE_STATUS: "unofficial", // 'unofficial' or 'official'
-            SHOW_DRAFT: false,         // Control draft visibility
-            CONTENT_DIR: "data_1012/kiji/",
+            SITE_STATUS: "unofficial",
+            // ★重要: ここが実際の読み込み先パスです
+            REAL_PATH: "data_1012/kiji/", 
+            // 画面表示用の論理パス名（ユーザー向け）
+            DISPLAY_PATH: "content/kiji/", 
             INDEX_FILE: "index.json"
         };
 
-        /**
-         * Custom Syntax Parser
-         * Handles: /:/ Heading, | Block, **Bold**, *Italic*, ***#hex*Color***
-         */
+        // 拡張された独自記法パーサー
         function parseTextToHtml(text) {
             if (!text) return "";
-
-            // 1. Sanitize Basic HTML chars to prevent breaking layout
             let html = text
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;");
+                .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-            // 2. Headings: /:/ Text
+            // 1. 見出し /:/ Text
             html = html.replace(/^\/:\/\s*(.+)$/gm, '<h3 class="custom-heading">$1</h3>');
 
-            // 3. Emphasis Block: | Text (Handles multiline by processing each line)
-            // Strategy: Replace lines starting with | with a div, then we rely on CSS
-            // Since we treat newlines later, we wrap individual lines here.
+            // 2. 強調ブロック | Text
             html = html.replace(/^\|\s*(.+)$/gm, '<div class="emphasis-block">$1</div>');
 
-            // 4. Color: ***#00e5ff*Text***
-            // Regex: \*\*\*#(HEX)\*(TEXT)\*\*\*
+            // 3. リスト - Item (新機能)
+            // 連続する行をまとめてリスト化するのは複雑なため、簡易的に各行を変換
+            html = html.replace(/^-\s*(.+)$/gm, '<ul class="txt-list"><li>$1</li></ul>');
+
+            // 4. 中央揃え -> Text <- (新機能)
+            html = html.replace(/->\s*(.+?)\s*<-/g, '<div class="center-text">$1</div>');
+
+            // 5. マーカー ::Text:: (新機能)
+            html = html.replace(/::(.+?)::/g, '<span class="marker">$1</span>');
+
+            // 6. 打ち消し線 ~~Text~~ (新機能)
+            html = html.replace(/~~(.+?)~~/g, '<span class="strikethrough">$1</span>');
+
+            // 7. 色 ***#hex*Text***
             html = html.replace(/\*\*\*#([a-fA-F0-9]{3,6})\*(.+?)\*\*\*/g, '<span style="color:#$1">$2</span>');
 
-            // 5. Bold: **Text**
+            // 8. 太字 **Text**
             html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
 
-            // 6. Italic: *Text*
+            // 9. リンク [Title](Url) (新機能)
+            html = html.replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" class="txt-link">$1</a>');
+
+            // 10. 斜体 *Text*
             html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
 
-            // 7. Newlines: Convert remaining newlines to <br>
-            // Avoid adding br after block elements to prevent double spacing
+            // 改行
             html = html.replace(/\n/g, '<br>');
-
             return html;
         }
 
-        /**
-         * UI Renderer
-         */
         const App = {
             init: async () => {
-                App.renderStatus();
+                if (CONFIG.SITE_STATUS === "unofficial") {
+                    document.getElementById('status-container').innerHTML = 
+                        `<span class="unofficial-badge">NON-OFFICIAL SITE</span>`;
+                }
                 await App.loadContent();
-                App.initScrollObserver();
             },
 
-            renderStatus: () => {
-                if (CONFIG.SITE_STATUS === "unofficial") {
-                    const container = document.getElementById('status-container');
-                    container.innerHTML = `<span class="unofficial-badge">Non-Official Site</span>`;
-                }
+            showError: (title, details, techInfo) => {
+                const appEl = document.getElementById('app');
+                appEl.innerHTML = `
+                    <div class="error-box">
+                        <div class="error-title">⚠️ ${title}</div>
+                        <p style="margin-bottom:10px; color:#fff;">${details}</p>
+                        <div class="error-detail">
+                            Error Log:<br>${techInfo}
+                        </div>
+                    </div>
+                `;
             },
 
             loadContent: async () => {
-                const appEl = document.getElementById('app');
+                const indexPath = `${CONFIG.REAL_PATH}${CONFIG.INDEX_FILE}`;
                 
                 try {
-                    // Fetch Index
-                    const indexRes = await fetch(`${CONFIG.CONTENT_DIR}${CONFIG.INDEX_FILE}`);
-                    if (!indexRes.ok) throw new Error('Index load failed');
-                    const indexData = await indexRes.json();
-
-                    // Filter based on draft config
-                    const posts = indexData.filter(post => {
-                        if (CONFIG.SHOW_DRAFT) return true;
-                        return !post.draft;
-                    });
-
-                    if (posts.length === 0) {
-                        appEl.innerHTML = '<p style="text-align:center; color:#666;">No content available.</p>';
-                        return;
+                    // 1. index.json の取得
+                    const indexRes = await fetch(indexPath);
+                    
+                    // 404エラーなどの判定
+                    if (!indexRes.ok) {
+                        throw new Error(`HTTP_ERROR_${indexRes.status}`);
                     }
 
-                    // Prepare grid container
-                    appEl.innerHTML = '<div class="grid" id="grid-container"></div>';
-                    const gridEl = document.getElementById('grid-container');
+                    // JSONパース（構文エラー判定）
+                    let indexData;
+                    try {
+                        indexData = await indexRes.json();
+                    } catch (e) {
+                        throw new Error(`JSON_SYNTAX_ERROR: ${e.message}`);
+                    }
 
-                    // Process each post
-                    for (const post of posts) {
-                        const contentRes = await fetch(`${CONFIG.CONTENT_DIR}${post.file}`);
-                        let rawText = "";
+                    // 記事の読み込み処理...
+                    const gridEl = document.createElement('div');
+                    gridEl.className = 'grid';
+
+                    for (const post of indexData) {
+                        const contentRes = await fetch(`${CONFIG.REAL_PATH}${post.file}`);
+                        let rawText = contentRes.ok ? await contentRes.text() : `Error: ${post.file} not found.`;
                         
-                        if (contentRes.ok) {
-                            rawText = await contentRes.text();
-                        } else {
-                            rawText = "Error: Content file not found.";
-                        }
-
-                        const htmlContent = parseTextToHtml(rawText);
-                        const draftBadge = (post.draft && CONFIG.SHOW_DRAFT) ? '<span class="draft-badge">DRAFT</span>' : '';
-
-                        const cardHTML = `
-                            <article class="card">
-                                <div class="card-header">
-                                    <span class="card-date">${post.date}</span>
-                                    ${draftBadge}
-                                </div>
-                                <h2 class="card-title">${post.title}</h2>
-                                <div class="card-content">
-                                    ${htmlContent}
-                                </div>
-                            </article>
+                        const card = document.createElement('article');
+                        card.className = 'card';
+                        card.innerHTML = `
+                            <div class="card-header">
+                                <span>${post.date}</span>
+                            </div>
+                            <h2 class="card-title">${post.title}</h2>
+                            <div class="card-content">${parseTextToHtml(rawText)}</div>
                         `;
-                        
-                        // Append to grid (using insertAdjacentHTML for better performance than innerHTML +=)
-                        gridEl.insertAdjacentHTML('beforeend', cardHTML);
+                        gridEl.appendChild(card);
                     }
+
+                    const appEl = document.getElementById('app');
+                    appEl.innerHTML = '';
+                    appEl.appendChild(gridEl);
+                    App.initScrollObserver();
 
                 } catch (error) {
                     console.error(error);
-                    appEl.innerHTML = `<p style="text-align:center; color:var(--danger-color);">Error loading data.<br>Please ensure content/kiji/index.json exists.</p>`;
+                    let msgTitle = "データ読み込みエラー";
+                    let msgBody = `設定されたフォルダ（${CONFIG.DISPLAY_PATH}）からデータを取得できませんでした。`;
+                    let techInfo = error.message;
+
+                    // エラーメッセージの振り分け
+                    if (error.message.includes('HTTP_ERROR_404')) {
+                        msgBody = "index.json が見つかりません。パスが正しいか、ファイルが存在するか確認してください。";
+                        techInfo += ` (Target: ${indexPath})`;
+                    } else if (error.message.includes('JSON_SYNTAX_ERROR')) {
+                        msgBody = "index.json の記述形式に間違いがあります。<br>カンマ「,」のつけ忘れや、最後の要素の余分なカンマを確認してください。";
+                    }
+
+                    App.showError(msgTitle, msgBody, techInfo);
                 }
             },
 
             initScrollObserver: () => {
-                const observerOptions = {
-                    root: null,
-                    rootMargin: '0px',
-                    threshold: 0.1
-                };
-
                 const observer = new IntersectionObserver((entries, obs) => {
                     entries.forEach(entry => {
                         if (entry.isIntersecting) {
@@ -399,16 +254,12 @@
                             obs.unobserve(entry.target);
                         }
                     });
-                }, observerOptions);
-
-                const cards = document.querySelectorAll('.card');
-                cards.forEach(card => observer.observe(card));
+                });
+                document.querySelectorAll('.card').forEach(c => observer.observe(c));
             }
         };
 
-        // Initialize on Load
         document.addEventListener('DOMContentLoaded', App.init);
-
     </script>
 </body>
 </html>
